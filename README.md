@@ -99,3 +99,4 @@ Place all of these downloads in the `./data/` directory.
 
 # Pretrained Weights:
 We've trained the caption generator (w/o training VGG-16 End2End) to 500 epochs, and we've placed the resulting checkpoint files in `./models/tensorflow`. You should experience an average reconstruction loss of ~1.75-1.85.
+
