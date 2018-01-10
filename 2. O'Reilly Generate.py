@@ -171,12 +171,12 @@ class Caption_Generator():
 
 
     def build_generator(self, maxlen, batchsize=1):
-        #same setup as `build_model` function 
+        # same setup as `build_model` function
         img = tf.placeholder(tf.float32, [self.batch_size, self.dim_in])
         image_embedding = tf.matmul(img, self.img_embedding) + self.img_embedding_bias
         state = self.lstm.zero_state(batchsize,dtype=tf.float32)
 
-        #declare list to hold the words of our generated captions
+        # declare list to hold the words of our generated captions
         all_words = []
         with tf.variable_scope("RNN"):
             # in the first iteration we have no previous word, so we directly pass in the image embedding

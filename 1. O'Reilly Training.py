@@ -111,11 +111,11 @@ def preProBuildWordVocab(sentence_iterator, word_count_threshold=30): # function
 class Caption_Generator():
     def __init__(self, dim_in, dim_embed, dim_hidden, batch_size, n_lstm_steps, n_words, init_b):
 
-        self.dim_in = dim_in
-        self.dim_embed = dim_embed
-        self.dim_hidden = dim_hidden
+        self.dim_in = dim_in            # 4096
+        self.dim_embed = dim_embed      # 256
+        self.dim_hidden = dim_hidden    # 256
         self.batch_size = batch_size
-        self.n_lstm_steps = n_lstm_steps
+        self.n_lstm_steps = n_lstm_steps    # maxlen+2
         self.n_words = n_words
         
         # declare the variables to be used for our word embeddings
@@ -153,12 +153,12 @@ class Caption_Generator():
         with tf.variable_scope("RNN"):
             for i in range(self.n_lstm_steps): 
                 if i > 0:
-                   #if this isn’t the first iteration of our LSTM we need to get the word_embedding corresponding
+                   # if this isn’t the first iteration of our LSTM we need to get the word_embedding corresponding
                    # to the (i-1)th word in our caption 
                     with tf.device("/cpu:0"):
                         current_embedding = tf.nn.embedding_lookup(self.word_embedding, caption_placeholder[:,i-1]) + self.embedding_bias
                 else:
-                     #if this is the first iteration of our LSTM we utilize the embedded image as our input 
+                    # if this is the first iteration of our LSTM we utilize the embedded image as our input
                     current_embedding = image_embedding
                 if i > 0: 
                     # allows us to reuse the LSTM tensor variable on each iteration
@@ -168,7 +168,7 @@ class Caption_Generator():
 
                 
                 if i > 0:
-                    #get the one-hot representation of the next word in our caption 
+                    # get the one-hot representation of the next word in our caption
                     labels = tf.expand_dims(caption_placeholder[:, i], 1)
                     ix_range=tf.range(0, self.batch_size, 1)
                     ixs = tf.expand_dims(ix_range, 1)
@@ -177,7 +177,7 @@ class Caption_Generator():
                             concat, tf.stack([self.batch_size, self.n_words]), 1.0, 0.0)
 
 
-                    #perform a softmax classification to generate the next word in the caption
+                    # perform a softmax classification to generate the next word in the caption
                     logit = tf.matmul(out, self.word_encoding) + self.word_encoding_bias
                     xentropy = tf.nn.softmax_cross_entropy_with_logits(logits=logit, labels=onehot)
                     xentropy = xentropy * mask[:,i]
