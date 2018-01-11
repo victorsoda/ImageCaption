@@ -213,7 +213,7 @@ if not os.path.exists('data/ixtoword.npy'):
 else:
     ixtoword = np.load('data/ixtoword.npy').tolist()
     n_words = len(ixtoword)
-    maxlen=15
+    maxlen=30
     
     tf.reset_default_graph()
     sess = tf.InteractiveSession()
