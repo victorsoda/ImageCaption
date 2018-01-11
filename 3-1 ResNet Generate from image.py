@@ -56,7 +56,7 @@ image_path = './image_path.jpg'
 
 dim_embed = 256
 dim_hidden = 256
-dim_in = 4096
+dim_in = 2048
 batch_size = 1
 learning_rate = 0.001
 momentum = 0.9
@@ -192,6 +192,15 @@ class Caption_Generator():
 if not os.path.exists('data/ixtoword.npy'):
     print ('You must run 1. O\'reilly Training.ipynb first.')
 else:
+    print('Can I get your name, tensor?')
+    from tensorflow.python import pywrap_tensorflow as ptf
+    reader = ptf.NewCheckpointReader(resnet_path + ckpt_name)
+    var = reader.get_variable_to_shape_map()
+    for key in var:
+        print("tensor_name: ", key)
+        print(reader.get_tensor(key).shape)
+    # exit(233)
+
     print("loading meta/ckpt...")
     saver = tf.train.import_meta_graph(resnet_path + meta_name)
     with tf.Session() as sess:
@@ -271,10 +280,22 @@ def read_image(path):
 
 
 def test(sess,image,generated_words,ixtoword,test_image_path=0): # Naive greedy search
-
-
+    
+    # from tensorflow.python import pywrap_tensorflow
+    
+    
+    # mylist = graph.get_tensors()
+    # import pprint
+    # pp = pprint.PrettyPrinter()
+    # pp.pprint(mylist)
+    # print(mylist)
+    # exit(233)
+    
+    init=tf.global_variables_initializer()    
+    sess.run(init)
+    
     feat = read_image(test_image_path)
-    fc7 = sess.run(graph.get_tensor_by_name("import/Relu_1:0"), feed_dict={images:feat})
+    fc7 = sess.run(graph.get_tensor_by_name("import/scale5/block2/c/beta:0"), feed_dict={images:feat})
 
     saver = tf.train.Saver()
     sanity_check=False
