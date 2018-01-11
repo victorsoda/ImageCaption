@@ -36,6 +36,7 @@ from collections import Counter
 
 
 model_path = './models/tensorflow'
+model_final_path = './models/tf_final'
 vgg_path = './data/vgg16-20160129.tfmodel'
 
 
@@ -264,12 +265,15 @@ def test(sess,image,generated_words,ixtoword,test_image_path=0): # Naive greedy 
 
     feat = read_image(test_image_path)
     fc7 = sess.run(graph.get_tensor_by_name("import/Relu_1:0"), feed_dict={images:feat})
+    print("feature vector:")
+    print(fc7)
+    print(fc7.shape)
 
     saver = tf.train.Saver()
     sanity_check=False
     # sanity_check=True
     if not sanity_check:
-        saved_path=tf.train.latest_checkpoint(model_path)
+        saved_path=tf.train.latest_checkpoint(model_final_path)
         saver.restore(sess, saved_path)
     else:
         tf.global_variables_initializer().run()
