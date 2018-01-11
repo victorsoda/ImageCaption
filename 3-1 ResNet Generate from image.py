@@ -192,7 +192,7 @@ class Caption_Generator():
 if not os.path.exists('data/ixtoword.npy'):
     print ('You must run 1. O\'reilly Training.ipynb first.')
 else:
-    print('Can I get your name, tensor?')
+    # get tensors' names.
     from tensorflow.python import pywrap_tensorflow as ptf
     reader = ptf.NewCheckpointReader(resnet_path + ckpt_name)
     var = reader.get_variable_to_shape_map()
@@ -201,29 +201,28 @@ else:
         print(reader.get_tensor(key).shape)
     # exit(233)
 
+    ixtoword = np.load('data/ixtoword.npy').tolist()
+    n_words = len(ixtoword)
+    maxlen = 15
+    graph = tf.get_default_graph()
+    sess = tf.InteractiveSession(graph=graph)
+
     print("loading meta/ckpt...")
     saver = tf.train.import_meta_graph(resnet_path + meta_name)
-    with tf.Session() as sess:
-        saver.restore(sess, resnet_path + ckpt_name)
-        os.system("rm -rf /tmp/load")
-        tf.train.write_graph(sess.graph_def, "/tmp/load", "test.pb", False)
+    saver.restore(sess, resnet_path + ckpt_name)
+    os.system("rm -rf /tmp/load")
+    tf.train.write_graph(sess.graph_def, "/tmp/load", "test.pb", False)
 
     tf.reset_default_graph()
-    with tf.Session() as persisted_sess:
-        print("loading graph...")
-        with gfile.FastGFile("/tmp/load/test.pb", 'rb') as f:
-            graph_def = tf.GraphDef()
-            graph_def.ParseFromString(f.read())
-            persisted_sess.graph.as_default()
+    print("loading graph...")
+    with gfile.FastGFile("/tmp/load/test.pb", 'rb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+        sess.graph.as_default()
 
     images = tf.placeholder("float32", [1, 224, 224, 3])
     tf.import_graph_def(graph_def, input_map={"images": images})
 
-    ixtoword = np.load('data/ixtoword.npy').tolist()
-    n_words = len(ixtoword)
-    maxlen=15
-    graph = tf.get_default_graph()
-    sess = tf.InteractiveSession(graph=graph)
     caption_generator = Caption_Generator(dim_in, dim_hidden, dim_embed, batch_size, maxlen+2, n_words)
     graph = tf.get_default_graph()
 
