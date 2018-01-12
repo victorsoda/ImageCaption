@@ -15,8 +15,8 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import pickle
-import cv2
-import skimage
+# import cv2
+# import skimage
 import pickle as pkl
 
 import tensorflow.python.platform

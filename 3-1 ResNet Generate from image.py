@@ -17,8 +17,8 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import pickle
-import cv2
-import skimage
+# import cv2
+# import skimage
 from tensorflow.python.platform import gfile
 
 import tensorflow.python.platform
@@ -37,6 +37,7 @@ from collections import Counter
 
 
 model_path = './models/tensorflow'
+model_final_path = './models/tf_final'
 vgg_path = './data/vgg16-20160129.tfmodel'
 resnet_path = "./data/resnet/"
 meta_name = "ResNet-L50.meta"
@@ -193,12 +194,12 @@ if not os.path.exists('data/ixtoword.npy'):
     print ('You must run 1. O\'reilly Training.ipynb first.')
 else:
     # get tensors' names.
-    from tensorflow.python import pywrap_tensorflow as ptf
-    reader = ptf.NewCheckpointReader(resnet_path + ckpt_name)
-    var = reader.get_variable_to_shape_map()
-    for key in var:
-        print("tensor_name: ", key)
-        print(reader.get_tensor(key).shape)
+    # from tensorflow.python import pywrap_tensorflow as ptf
+    # reader = ptf.NewCheckpointReader(resnet_path + ckpt_name)
+    # var = reader.get_variable_to_shape_map()
+    # for key in var:
+    #     print("tensor_name: ", key)
+    #     print(reader.get_tensor(key).shape)
     # exit(233)
 
     ixtoword = np.load('data/ixtoword.npy').tolist()
@@ -213,18 +214,25 @@ else:
     os.system("rm -rf /tmp/load")
     tf.train.write_graph(sess.graph_def, "/tmp/load", "test.pb", False)
 
-    tf.reset_default_graph()
+    # tf.reset_default_graph()
     print("loading graph...")
     with gfile.FastGFile("/tmp/load/test.pb", 'rb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
         sess.graph.as_default()
 
-    images = tf.placeholder("float32", [1, 224, 224, 3])
+    images = tf.placeholder("float32", [1, 224, 224, 3], name="images")
     tf.import_graph_def(graph_def, input_map={"images": images})
 
     caption_generator = Caption_Generator(dim_in, dim_hidden, dim_embed, batch_size, maxlen+2, n_words)
     graph = tf.get_default_graph()
+
+    mylist = graph.get_operations()
+    import pprint
+    pp = pprint.PrettyPrinter()
+    pp.pprint(mylist)
+    # exit(1234)
+
 
     image, generated_words = caption_generator.build_generator(maxlen=maxlen)
 
@@ -281,8 +289,8 @@ def read_image(path):
 def test(sess,image,generated_words,ixtoword,test_image_path=0): # Naive greedy search
     
     # from tensorflow.python import pywrap_tensorflow
-    
-    
+
+
     # mylist = graph.get_tensors()
     # import pprint
     # pp = pprint.PrettyPrinter()
@@ -290,11 +298,15 @@ def test(sess,image,generated_words,ixtoword,test_image_path=0): # Naive greedy 
     # print(mylist)
     # exit(233)
     
-    init=tf.global_variables_initializer()    
-    sess.run(init)
+    # init=tf.global_variables_initializer()
+    # sess.run(init)
     
-    feat = read_image(test_image_path)
-    fc7 = sess.run(graph.get_tensor_by_name("import/scale5/block2/c/beta:0"), feed_dict={images:feat})
+    # feat = read_image(test_image_path)
+    feat = np.zeros((1, 224, 224, 3), dtype="float32")
+    fc7 = sess.run(graph.get_tensor_by_name("scale5/block3/c/beta:0"), feed_dict={images:feat})
+    print(fc7)
+    print(fc7.shape)
+    print("yeaaaah!")
 
     saver = tf.train.Saver()
     sanity_check=False

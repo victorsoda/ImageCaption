@@ -17,8 +17,8 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import pickle
-import cv2
-import skimage
+# import cv2
+# import skimage
 
 import tensorflow.python.platform
 from keras.preprocessing import sequence
@@ -206,6 +206,12 @@ else:
     sess = tf.InteractiveSession(graph=graph)
     caption_generator = Caption_Generator(dim_in, dim_hidden, dim_embed, batch_size, maxlen+2, n_words)
     graph = tf.get_default_graph()
+
+    mylist = graph.get_operations()
+    import pprint
+    pp = pprint.PrettyPrinter()
+    pp.pprint(mylist)
+    exit(1234)
 
     image, generated_words = caption_generator.build_generator(maxlen=maxlen)
 
