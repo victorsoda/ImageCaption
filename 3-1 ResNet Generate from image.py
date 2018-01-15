@@ -286,7 +286,7 @@ def test(sess,image,generated_words,ixtoword): # Naive greedy search
             fc7 = sess.run(graph.get_tensor_by_name("scale5/block3/c/beta:0"), feed_dict={images: feat})
             for i in range(5):
                 feats.append(fc7)
-    np.save("./data/feats_COCO2014.npy", feats)
+    np.save("./data/feats_resnet50_COCO2014.npy", feats)
 
 
     # feat = read_image(test_image_path)
