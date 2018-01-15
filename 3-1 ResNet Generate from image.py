@@ -49,7 +49,7 @@ ckpt_name = "ResNet-L50.ckpt"
 # In[ ]:
 
 
-image_path = './image_path.jpg'
+image_path = './data/images/'
 
 
 # In[ ]:
@@ -191,17 +191,8 @@ class Caption_Generator():
 
 
 if not os.path.exists('data/ixtoword.npy'):
-    print ('You must run 1. O\'reilly Training.ipynb first.')
+    print('You must run 1. O\'reilly Training.ipynb first.')
 else:
-    # get tensors' names.
-    # from tensorflow.python import pywrap_tensorflow as ptf
-    # reader = ptf.NewCheckpointReader(resnet_path + ckpt_name)
-    # var = reader.get_variable_to_shape_map()
-    # for key in var:
-    #     print("tensor_name: ", key)
-    #     print(reader.get_tensor(key).shape)
-    # exit(233)
-
     ixtoword = np.load('data/ixtoword.npy').tolist()
     n_words = len(ixtoword)
     maxlen = 15
@@ -231,8 +222,6 @@ else:
     import pprint
     pp = pprint.PrettyPrinter()
     pp.pprint(mylist)
-    # exit(1234)
-
 
     image, generated_words = caption_generator.build_generator(maxlen=maxlen)
 
@@ -286,45 +275,44 @@ def read_image(path):
 # In[ ]:
 
 
-def test(sess,image,generated_words,ixtoword,test_image_path=0): # Naive greedy search
-    
-    # from tensorflow.python import pywrap_tensorflow
+def test(sess,image,generated_words,ixtoword): # Naive greedy search
+
+    feats = []  # n_samples * 2048
+    files = os.listdir(image_path)
+    for filename in files:
+        child = os.path.join(image_path, filename)
+        if os.path.isfile(child):
+            feat = read_image(child)
+            fc7 = sess.run(graph.get_tensor_by_name("scale5/block3/c/beta:0"), feed_dict={images: feat})
+            for i in range(5):
+                feats.append(fc7)
+    np.save("./data/feats_COCO2014.npy", feats)
 
 
-    # mylist = graph.get_tensors()
-    # import pprint
-    # pp = pprint.PrettyPrinter()
-    # pp.pprint(mylist)
-    # print(mylist)
-    # exit(233)
-    
-    # init=tf.global_variables_initializer()
-    # sess.run(init)
-    
     # feat = read_image(test_image_path)
-    feat = np.zeros((1, 224, 224, 3), dtype="float32")
-    fc7 = sess.run(graph.get_tensor_by_name("scale5/block3/c/beta:0"), feed_dict={images:feat})
-    print(fc7)
-    print(fc7.shape)
-    print("yeaaaah!")
+    # # feat = np.zeros((1, 224, 224, 3), dtype="float32")
+    # fc7 = sess.run(graph.get_tensor_by_name("scale5/block3/c/beta:0"), feed_dict={images:feat})
+    # print(fc7)
+    # print(fc7.shape)
+    # print("yeaaaah!")
 
-    saver = tf.train.Saver()
-    sanity_check=False
-    # sanity_check=True
-    if not sanity_check:
-        saved_path=tf.train.latest_checkpoint(model_path)
-        saver.restore(sess, saved_path)
-    else:
-        tf.global_variables_initializer().run()
-
-    generated_word_index= sess.run(generated_words, feed_dict={image: fc7})
-    generated_word_index = np.hstack(generated_word_index)
-    generated_words = [ixtoword[x] for x in generated_word_index]
-    punctuation = np.argmax(np.array(generated_words) == '.')+1
-
-    generated_words = generated_words[:punctuation]
-    generated_sentence = ' '.join(generated_words)
-    print(generated_sentence)
+    # saver = tf.train.Saver()
+    # sanity_check=False
+    # # sanity_check=True
+    # if not sanity_check:
+    #     saved_path=tf.train.latest_checkpoint(model_path)
+    #     saver.restore(sess, saved_path)
+    # else:
+    #     tf.global_variables_initializer().run()
+    #
+    # generated_word_index= sess.run(generated_words, feed_dict={image: fc7})
+    # generated_word_index = np.hstack(generated_word_index)
+    # generated_words = [ixtoword[x] for x in generated_word_index]
+    # punctuation = np.argmax(np.array(generated_words) == '.')+1
+    #
+    # generated_words = generated_words[:punctuation]
+    # generated_sentence = ' '.join(generated_words)
+    # print(generated_sentence)
 
 
 # In[ ]:

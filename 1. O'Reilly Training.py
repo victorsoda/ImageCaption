@@ -64,7 +64,7 @@ feats, captions = get_data(annotation_path, feature_path)
 
 print(feats.shape)
 print(captions.shape)
-
+exit(233)
 
 # In[ ]:
 
