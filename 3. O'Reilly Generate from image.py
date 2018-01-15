@@ -17,8 +17,8 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import pickle
-# import cv2
-# import skimage
+import cv2
+import skimage
 
 import tensorflow.python.platform
 from keras.preprocessing import sequence
@@ -46,7 +46,7 @@ vgg_path = './data/vgg16-20160129.tfmodel'
 # In[ ]:
 
 
-image_path = './image_path.jpg'
+image_path = './data/images/'
 
 
 # In[ ]:
@@ -207,11 +207,11 @@ else:
     caption_generator = Caption_Generator(dim_in, dim_hidden, dim_embed, batch_size, maxlen+2, n_words)
     graph = tf.get_default_graph()
 
-    mylist = graph.get_operations()
-    import pprint
-    pp = pprint.PrettyPrinter()
-    pp.pprint(mylist)
-    exit(1234)
+    # mylist = graph.get_operations()
+    # import pprint
+    # pp = pprint.PrettyPrinter()
+    # pp.pprint(mylist)
+    # exit(1234)
 
     image, generated_words = caption_generator.build_generator(maxlen=maxlen)
 
@@ -267,31 +267,41 @@ def read_image(path):
 
 def test(sess,image,generated_words,ixtoword,test_image_path=0): # Naive greedy search
 
-    
+    feats = []  # n_samples * 2048
+    files = os.listdir(image_path)
+    for filename in files:
+        child = os.path.join(image_path, filename)
+        if os.path.isfile(child):
+            feat = read_image(child)
+            fc7 = sess.run(graph.get_tensor_by_name("import/Relu_1:0"), feed_dict={images: feat})
+            for i in range(5):
+                feats.append(fc7)
+    np.save("./data/feats_vgg_COCO2014.npy", feats)
+    print("feats.shape =", np.array(feats).shape)
 
-    feat = read_image(test_image_path)
-    fc7 = sess.run(graph.get_tensor_by_name("import/Relu_1:0"), feed_dict={images:feat})
-    print("feature vector:")
-    print(fc7)
-    print(fc7.shape)
+    # feat = read_image(test_image_path)
+    # fc7 = sess.run(graph.get_tensor_by_name("import/Relu_1:0"), feed_dict={images:feat})
+    # print("feature vector:")
+    # print(fc7)
+    # print(fc7.shape)
 
-    saver = tf.train.Saver()
-    sanity_check=False
-    # sanity_check=True
-    if not sanity_check:
-        saved_path=tf.train.latest_checkpoint(model_final_path)
-        saver.restore(sess, saved_path)
-    else:
-        tf.global_variables_initializer().run()
-
-    generated_word_index= sess.run(generated_words, feed_dict={image:fc7})
-    generated_word_index = np.hstack(generated_word_index)
-    generated_words = [ixtoword[x] for x in generated_word_index]
-    punctuation = np.argmax(np.array(generated_words) == '.')+1
-
-    generated_words = generated_words[:punctuation]
-    generated_sentence = ' '.join(generated_words)
-    print(generated_sentence)
+    # saver = tf.train.Saver()
+    # sanity_check=False
+    # # sanity_check=True
+    # if not sanity_check:
+    #     saved_path=tf.train.latest_checkpoint(model_final_path)
+    #     saver.restore(sess, saved_path)
+    # else:
+    #     tf.global_variables_initializer().run()
+    #
+    # generated_word_index= sess.run(generated_words, feed_dict={image:fc7})
+    # generated_word_index = np.hstack(generated_word_index)
+    # generated_words = [ixtoword[x] for x in generated_word_index]
+    # punctuation = np.argmax(np.array(generated_words) == '.')+1
+    #
+    # generated_words = generated_words[:punctuation]
+    # generated_sentence = ' '.join(generated_words)
+    # print(generated_sentence)
 
 
 # In[ ]:
