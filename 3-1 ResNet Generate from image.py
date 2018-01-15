@@ -17,8 +17,8 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import pickle
-# import cv2
-# import skimage
+import cv2
+import skimage
 from tensorflow.python.platform import gfile
 
 import tensorflow.python.platform
@@ -288,6 +288,7 @@ def test(sess,image,generated_words,ixtoword): # Naive greedy search
                 feats.append(fc7)
     np.save("./data/feats_resnet50_COCO2014.npy", feats)
     print("feats.shape =", np.array(feats).shape)
+
 
     # feat = read_image(test_image_path)
     # # feat = np.zeros((1, 224, 224, 3), dtype="float32")
