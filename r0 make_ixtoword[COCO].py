@@ -10,9 +10,11 @@ def preProBuildWordVocab(sentence_iterator, word_count_threshold=30): # function
     word_counts = {}
     nsents = 0
     for sent in sentence_iterator:
-      nsents += 1
-      for w in sent.lower().split(' '):
-        word_counts[w] = word_counts.get(w, 0) + 1
+        if nsents > 315098:
+            print(nsents)
+        nsents += 1
+        for w in sent.lower().split(' '):
+            word_counts[w] = word_counts.get(w, 0) + 1
     vocab = [w for w in word_counts if word_counts[w] >= word_count_threshold]
     print('preprocessed words %d -> %d' % (len(word_counts), len(vocab)))
 

@@ -269,7 +269,11 @@ def test(sess,image,generated_words,ixtoword,test_image_path=0): # Naive greedy 
 
     feats = []  # n_samples * 2048
     files = os.listdir(image_path)
+    cnt = 0
     for filename in files:
+        cnt += 1
+        if cnt % 1000 == 0:
+            print(cnt)
         child = os.path.join(image_path, filename)
         if os.path.isfile(child):
             feat = read_image(child)

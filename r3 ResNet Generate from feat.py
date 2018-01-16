@@ -1,11 +1,10 @@
-
 # coding: utf-8
 
 # # Generating captions from images
 # This notebook builds on the previous caption generation notebook. The key difference however is that the image feature embedding is generated from an image passed through the VGG-16 network, as opposed to just pulling the feature embedding from an already precomputed set of feature embeddings for the Flickr-30K dataset. This allows the user to generate captions for their own images in addition to generating captions for the Flickr-30K images.
-# 
+#
 # *Note:* The `model_path` variable should be the same as the `model_path` variable set in `O'Reilly Training.ipynb`
-# 
+#
 # # Make sure to run the 'O'Reilly Training.ipynb' notebook for at least one epoch before running this notebook.
 
 # In[ ]:
@@ -17,20 +16,19 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import pickle
-import cv2
-import skimage
+# import cv2
+# import skimage
 from tensorflow.python.platform import gfile
 
 import tensorflow.python.platform
 from keras.preprocessing import sequence
 from collections import Counter
 
-
 # # Downloading Data
-# In order to run this notebook you will need to download a pretrained TensorFlow model for [VGG-16](https://drive.google.com/file/d/0B2vTU3h54lTyaDczbFhsZFpsUGs/view?usp=sharing) generated from the original Caffe model from the VGG-16 paper. 
-# 
+# In order to run this notebook you will need to download a pretrained TensorFlow model for [VGG-16](https://drive.google.com/file/d/0B2vTU3h54lTyaDczbFhsZFpsUGs/view?usp=sharing) generated from the original Caffe model from the VGG-16 paper.
+#
 # Place this download in the `./data/` folder.
-# 
+#
 # The graph model should now be saved at `./data/vgg16-20160129.tfmodel` .
 
 # In[ ]:
@@ -42,15 +40,15 @@ vgg_path = './data/vgg16-20160129.tfmodel'
 resnet_path = "./data/resnet/"
 meta_name = "ResNet-L50.meta"
 ckpt_name = "ResNet-L50.ckpt"
+feature_path = './data/feats_resnet50_COCO2014.npy'
+annotation_path = './data/results_COCO2014.token'
 
 # # Pick your image
 # Set `image_path` to point to the image you'd like to generate a caption for.
 
 # In[ ]:
 
-
 image_path = './data/images/'
-
 
 # In[ ]:
 
@@ -66,6 +64,10 @@ n_epochs = 25
 
 # In[ ]:
 
+def get_data(annotation_path, feature_path):
+    annotations = pd.read_table(annotation_path, sep='\t', header=None, names=['image', 'caption'])
+    return np.load(feature_path, 'r'), annotations['caption'].values
+
 
 class Caption_Generator():
     def __init__(self, dim_in, dim_embed, dim_hidden, batch_size, n_lstm_steps, n_words, init_b=None):
@@ -76,24 +78,25 @@ class Caption_Generator():
         self.batch_size = batch_size
         self.n_lstm_steps = n_lstm_steps
         self.n_words = n_words
-        
+
         # declare the variables to be used for our word embeddings
         with tf.device("/cpu:0"):
-            self.word_embedding = tf.Variable(tf.random_uniform([self.n_words, self.dim_embed], -0.1, 0.1), name='word_embedding')
+            self.word_embedding = tf.Variable(tf.random_uniform([self.n_words, self.dim_embed], -0.1, 0.1),
+                                              name='word_embedding')
 
         self.embedding_bias = tf.Variable(tf.zeros([dim_embed]), name='embedding_bias')
-        
+
         # declare the LSTM itself
         self.lstm = tf.contrib.rnn.BasicLSTMCell(dim_hidden)
-        
+
         # declare the variables to be used to embed the image feature embedding to the word embedding space
         self.img_embedding = tf.Variable(tf.random_uniform([dim_in, dim_hidden], -0.1, 0.1), name='img_embedding')
         self.img_embedding_bias = tf.Variable(tf.zeros([dim_hidden]), name='img_embedding_bias')
 
         # declare the variables to go from an LSTM output to a word encoding output
         self.word_encoding = tf.Variable(tf.random_uniform([dim_hidden, n_words], -0.1, 0.1), name='word_encoding')
-        
-        # optional initialization setter for encoding bias variable 
+
+        # optional initialization setter for encoding bias variable
         if init_b is not None:
             self.word_encoding_bias = tf.Variable(init_b, name='word_encoding_bias')
         else:
@@ -101,64 +104,62 @@ class Caption_Generator():
 
     def build_model(self):
         # declaring the placeholders for our extracted image feature vectors, our caption, and our mask
-        # (describes how long our caption is with an array of 0/1 values of length `maxlen`  
+        # (describes how long our caption is with an array of 0/1 values of length `maxlen`
         img = tf.placeholder(tf.float32, [self.batch_size, self.dim_in])
         caption_placeholder = tf.placeholder(tf.int32, [self.batch_size, self.n_lstm_steps])
         mask = tf.placeholder(tf.float32, [self.batch_size, self.n_lstm_steps])
-        
+
         # getting an initial LSTM embedding from our image_imbedding
         image_embedding = tf.matmul(img, self.img_embedding) + self.img_embedding_bias
-        
+
         # setting initial state of our LSTM
         state = self.lstm.zero_state(self.batch_size, dtype=tf.float32)
 
         total_loss = 0.0
         with tf.variable_scope("RNN"):
-            for i in range(self.n_lstm_steps): 
+            for i in range(self.n_lstm_steps):
                 if i > 0:
-                   #if this isn’t the first iteration of our LSTM we need to get the word_embedding corresponding
-                   # to the (i-1)th word in our caption 
+                    # if this isn’t the first iteration of our LSTM we need to get the word_embedding corresponding
+                    # to the (i-1)th word in our caption
                     with tf.device("/cpu:0"):
-                        current_embedding = tf.nn.embedding_lookup(self.word_embedding, caption_placeholder[:,i-1]) + self.embedding_bias
+                        current_embedding = tf.nn.embedding_lookup(self.word_embedding,
+                                                                   caption_placeholder[:, i - 1]) + self.embedding_bias
                 else:
-                     #if this is the first iteration of our LSTM we utilize the embedded image as our input 
+                    # if this is the first iteration of our LSTM we utilize the embedded image as our input
                     current_embedding = image_embedding
-                if i > 0: 
+                if i > 0:
                     # allows us to reuse the LSTM tensor variable on each iteration
                     tf.get_variable_scope().reuse_variables()
 
                 out, state = self.lstm(current_embedding, state)
 
-                
                 if i > 0:
-                    #get the one-hot representation of the next word in our caption 
+                    # get the one-hot representation of the next word in our caption
                     labels = tf.expand_dims(caption_placeholder[:, i], 1)
-                    ix_range=tf.range(0, self.batch_size, 1)
+                    ix_range = tf.range(0, self.batch_size, 1)
                     ixs = tf.expand_dims(ix_range, 1)
-                    concat = tf.concat([ixs, labels],1)
+                    concat = tf.concat([ixs, labels], 1)
                     onehot = tf.sparse_to_dense(
-                            concat, tf.stack([self.batch_size, self.n_words]), 1.0, 0.0)
+                        concat, tf.stack([self.batch_size, self.n_words]), 1.0, 0.0)
 
-
-                    #perform a softmax classification to generate the next word in the caption
+                    # perform a softmax classification to generate the next word in the caption
                     logit = tf.matmul(out, self.word_encoding) + self.word_encoding_bias
                     xentropy = tf.nn.softmax_cross_entropy_with_logits(logits=logit, labels=onehot)
-                    xentropy = xentropy * mask[:,i]
+                    xentropy = xentropy * mask[:, i]
 
                     loss = tf.reduce_sum(xentropy)
                     total_loss += loss
 
-            total_loss = total_loss / tf.reduce_sum(mask[:,1:])
-            return total_loss, img,  caption_placeholder, mask
-
+            total_loss = total_loss / tf.reduce_sum(mask[:, 1:])
+            return total_loss, img, caption_placeholder, mask
 
     def build_generator(self, maxlen, batchsize=1):
-        #same setup as `build_model` function 
+        # same setup as `build_model` function
         img = tf.placeholder(tf.float32, [self.batch_size, self.dim_in])
         image_embedding = tf.matmul(img, self.img_embedding) + self.img_embedding_bias
-        state = self.lstm.zero_state(batchsize,dtype=tf.float32)
+        state = self.lstm.zero_state(batchsize, dtype=tf.float32)
 
-        #declare list to hold the words of our generated captions
+        # declare list to hold the words of our generated captions
         all_words = []
         with tf.variable_scope("RNN"):
             # in the first iteration we have no previous word, so we directly pass in the image embedding
@@ -171,13 +172,12 @@ class Caption_Generator():
 
                 out, state = self.lstm(previous_word, state)
 
-
                 # get a one-hot word encoding from the output of the LSTM
                 logit = tf.matmul(out, self.word_encoding) + self.word_encoding_bias
                 best_word = tf.argmax(logit, 1)
 
                 with tf.device("/cpu:0"):
-                    # get the embedding of the best_word to use as input to the next iteration of our LSTM 
+                    # get the embedding of the best_word to use as input to the next iteration of our LSTM
                     previous_word = tf.nn.embedding_lookup(self.word_embedding, best_word)
 
                 previous_word += self.embedding_bias
@@ -215,11 +215,12 @@ else:
     images = tf.placeholder("float32", [1, 224, 224, 3], name="images")
     tf.import_graph_def(graph_def, input_map={"images": images})
 
-    caption_generator = Caption_Generator(dim_in, dim_hidden, dim_embed, batch_size, maxlen+2, n_words)
+    caption_generator = Caption_Generator(dim_in, dim_hidden, dim_embed, batch_size, maxlen + 2, n_words)
     graph = tf.get_default_graph()
 
     mylist = graph.get_operations()
     import pprint
+
     pp = pprint.PrettyPrinter()
     pp.pprint(mylist)
 
@@ -235,23 +236,23 @@ def crop_image(x, target_height=227, target_width=227, as_float=True):
         image = image.astype(np.float32)
 
     if len(image.shape) == 2:
-        image = np.tile(image[:,:,None], 3)
+        image = np.tile(image[:, :, None], 3)
     elif len(image.shape) == 4:
-        image = image[:,:,:,0]
+        image = image[:, :, :, 0]
 
     height, width, rgb = image.shape
     if width == height:
-        resized_image = cv2.resize(image, (target_height,target_width))
+        resized_image = cv2.resize(image, (target_height, target_width))
 
     elif height < width:
-        resized_image = cv2.resize(image, (int(width * float(target_height)/height), target_width))
+        resized_image = cv2.resize(image, (int(width * float(target_height) / height), target_width))
         cropping_length = int((resized_image.shape[1] - target_height) / 2)
-        resized_image = resized_image[:,cropping_length:resized_image.shape[1] - cropping_length]
+        resized_image = resized_image[:, cropping_length:resized_image.shape[1] - cropping_length]
 
     else:
         resized_image = cv2.resize(image, (target_height, int(height * float(target_width) / width)))
         cropping_length = int((resized_image.shape[0] - target_width) / 2)
-        resized_image = resized_image[cropping_length:resized_image.shape[0] - cropping_length,:]
+        resized_image = resized_image[cropping_length:resized_image.shape[0] - cropping_length, :]
 
     return cv2.resize(resized_image, (target_height, target_width))
 
@@ -260,13 +261,12 @@ def crop_image(x, target_height=227, target_width=227, as_float=True):
 
 
 def read_image(path):
+    img = crop_image(path, target_height=224, target_width=224)
+    if img.shape[2] == 4:
+        img = img[:, :, :3]
 
-     img = crop_image(path, target_height=224, target_width=224)
-     if img.shape[2] == 4:
-         img = img[:,:,:3]
-
-     img = img[None, ...]
-     return img
+    img = img[None, ...]
+    return img
 
 
 # ## Note:
@@ -275,53 +275,30 @@ def read_image(path):
 # In[ ]:
 
 
-def test(sess,image,generated_words,ixtoword): # Naive greedy search
+def test(sess, image, generated_words, ixtoword, idx=0):  # Naive greedy search
 
-    feats = []  # n_samples * 2048
-    files = os.listdir(image_path)
-    cnt = 0
-    for filename in files:
-        cnt += 1
-        if cnt % 1000 == 0:
-            print(cnt)
-        child = os.path.join(image_path, filename)
-        if os.path.isfile(child):
-            feat = read_image(child)
-            fc7 = sess.run(graph.get_tensor_by_name("scale5/block3/c/beta:0"), feed_dict={images: feat})
-            for i in range(5):
-                feats.append(fc7)
-    np.save("./data/feats_resnet50_COCO2014.npy", feats)
-    print("feats.shape =", np.array(feats).shape)
+    feats, captions = get_data(annotation_path, feature_path)
+    feat = np.array([feats[idx]])
 
+    saver = tf.train.Saver()
+    sanity_check = False
+    # sanity_check=True
+    if not sanity_check:
+        saved_path = tf.train.latest_checkpoint(model_path)
+        saver.restore(sess, saved_path)
+    else:
+        tf.global_variables_initializer().run()
 
-    # feat = read_image(test_image_path)
-    # # feat = np.zeros((1, 224, 224, 3), dtype="float32")
-    # fc7 = sess.run(graph.get_tensor_by_name("scale5/block3/c/beta:0"), feed_dict={images:feat})
-    # print(fc7)
-    # print(fc7.shape)
-    # print("yeaaaah!")
+    generated_word_index = sess.run(generated_words, feed_dict={image: feat})
+    generated_word_index = np.hstack(generated_word_index)
 
-    # saver = tf.train.Saver()
-    # sanity_check=False
-    # # sanity_check=True
-    # if not sanity_check:
-    #     saved_path=tf.train.latest_checkpoint(model_path)
-    #     saver.restore(sess, saved_path)
-    # else:
-    #     tf.global_variables_initializer().run()
-    #
-    # generated_word_index= sess.run(generated_words, feed_dict={image: fc7})
-    # generated_word_index = np.hstack(generated_word_index)
-    # generated_words = [ixtoword[x] for x in generated_word_index]
-    # punctuation = np.argmax(np.array(generated_words) == '.')+1
-    #
-    # generated_words = generated_words[:punctuation]
-    # generated_sentence = ' '.join(generated_words)
-    # print(generated_sentence)
+    generated_sentence = [ixtoword[x] for x in generated_word_index]
+    print(generated_sentence)
 
 
 # In[ ]:
 
+# test_img_path = './data/images/COCO_train2014_000000000025.jpg'
 
-test(sess,image,generated_words,ixtoword)
+test(sess, image, generated_words, ixtoword, 1)
 
