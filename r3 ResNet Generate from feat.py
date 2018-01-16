@@ -69,7 +69,7 @@ n_epochs = 25
 
 def get_data(annotation_path, feature_path):
     annotations = pd.read_table(annotation_path, sep='\t', header=None, names=['image', 'caption'])
-    return np.load(feature_path, 'r'), annotations['caption'].values
+    return np.load(feature_path, 'r'), annotations['caption'].values, annotations['image'].values
 
 
 class Caption_Generator():
@@ -241,7 +241,6 @@ else:
     sess = tf.InteractiveSession()
     
     caption_generator = Caption_Generator(dim_in, dim_hidden, dim_embed, batch_size, maxlen+2, n_words)
-
     image, generated_words = caption_generator.build_generator(maxlen=maxlen)
 
 # In[ ]:
@@ -293,12 +292,12 @@ def read_image(path):
 
 
 def test(sess, image, generated_words, ixtoword, idx=0):  # Naive greedy search
-    
-    print("testing...")
-    feats, captions = get_data(annotation_path, feature_path)
+
+    feats, captions, image_names = get_data(annotation_path, feature_path)
     feat = np.array([feats[idx]])
     print("Answer Caption:")
     print(captions[idx])
+    print("Target Image: ", image_names[idx])
 
     saver = tf.train.Saver()
     sanity_check = False
