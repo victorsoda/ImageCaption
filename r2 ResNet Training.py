@@ -33,6 +33,8 @@ from collections import Counter
 
 # In[ ]:
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0，1，2, 3"
+
 
 model_path = './models/resnet50_save'
 model_path_transfer = './models/resnet50_final'
@@ -195,7 +197,7 @@ dim_hidden = 256
 dim_in = 2048
 batch_size = 128
 momentum = 0.9
-n_epochs = 150
+n_epochs = 100
 
 
 def train(learning_rate=0.001, continue_training=False, transfer=True):
@@ -204,7 +206,7 @@ def train(learning_rate=0.001, continue_training=False, transfer=True):
     feats, captions = get_data(annotation_path, feature_path)
     wordtoix, ixtoword, init_b = preProBuildWordVocab(captions)
 
-    np.save('data/ixtoword', ixtoword)
+    # np.save('data/ixtoword', ixtoword)
 
     index = (np.arange(len(feats)).astype(int))
     np.random.shuffle(index)
@@ -263,9 +265,9 @@ def train(learning_rate=0.001, continue_training=False, transfer=True):
 
 
 try:
-    train(.001, False, False)  # train from scratch
+    # train(.001, False, False)  # train from scratch
     # train(.001, True, True)  # continue training from pretrained weights @epoch500
-    # train(.001, True, False)  #train from previously saved weights
+    train(.001, True, False)  #train from previously saved weights
 except KeyboardInterrupt:
     print('Exiting Training')
 
