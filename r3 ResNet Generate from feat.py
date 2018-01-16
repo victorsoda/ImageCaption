@@ -24,6 +24,9 @@ import tensorflow.python.platform
 from keras.preprocessing import sequence
 from collections import Counter
 
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "1，2"
+
 # # Downloading Data
 # In order to run this notebook you will need to download a pretrained TensorFlow model for [VGG-16](https://drive.google.com/file/d/0B2vTU3h54lTyaDczbFhsZFpsUGs/view?usp=sharing) generated from the original Caffe model from the VGG-16 paper.
 #
@@ -34,8 +37,8 @@ from collections import Counter
 # In[ ]:
 
 
-model_path = './models/tensorflow'
-model_final_path = './models/tf_final'
+model_path = './models/resnet50_save'
+model_final_path = './models/resnet50_final'
 vgg_path = './data/vgg16-20160129.tfmodel'
 resnet_path = "./data/resnet/"
 meta_name = "ResNet-L50.meta"
@@ -189,7 +192,7 @@ class Caption_Generator():
 
 # In[ ]:
 
-
+'''
 if not os.path.exists('data/ixtoword.npy'):
     print('You must run 1. O\'reilly Training.ipynb first.')
 else:
@@ -225,7 +228,21 @@ else:
     pp.pprint(mylist)
 
     image, generated_words = caption_generator.build_generator(maxlen=maxlen)
+'''
 
+if not os.path.exists('data/ixtoword.npy'):
+    print ('You must run 1. O\'reilly Training.ipynb first.')
+else:
+    ixtoword = np.load('data/ixtoword.npy').tolist()
+    n_words = len(ixtoword)
+    maxlen=30
+    
+    tf.reset_default_graph()
+    sess = tf.InteractiveSession()
+    
+    caption_generator = Caption_Generator(dim_in, dim_hidden, dim_embed, batch_size, maxlen+2, n_words)
+
+    image, generated_words = caption_generator.build_generator(maxlen=maxlen)
 
 # In[ ]:
 
@@ -276,9 +293,12 @@ def read_image(path):
 
 
 def test(sess, image, generated_words, ixtoword, idx=0):  # Naive greedy search
-
+    
+    print("testing...")
     feats, captions = get_data(annotation_path, feature_path)
     feat = np.array([feats[idx]])
+    print("Answer Caption:")
+    print(captions[idx])
 
     saver = tf.train.Saver()
     sanity_check = False
@@ -292,9 +312,17 @@ def test(sess, image, generated_words, ixtoword, idx=0):  # Naive greedy search
     generated_word_index = sess.run(generated_words, feed_dict={image: feat})
     generated_word_index = np.hstack(generated_word_index)
 
-    generated_sentence = [ixtoword[x] for x in generated_word_index]
-    print(generated_sentence)
+    # generated_sentence = [ixtoword[x] for x in generated_word_index]
+    
+    # print(generated_sentence)
+    
+    generated_words = [ixtoword[x] for x in generated_word_index]
+    punctuation = np.argmax(np.array(generated_words) == '.')+1
 
+    generated_words = generated_words[:punctuation]
+    generated_sentence = ' '.join(generated_words)
+    print("Generate result: ")
+    print(generated_sentence)
 
 # In[ ]:
 

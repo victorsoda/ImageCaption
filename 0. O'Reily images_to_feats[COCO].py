@@ -24,6 +24,7 @@ import tensorflow.python.platform
 from keras.preprocessing import sequence
 from collections import Counter
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2"
 
 # # Downloading Data
 # In order to run this notebook you will need to download a pretrained TensorFlow model for [VGG-16](https://drive.google.com/file/d/0B2vTU3h54lTyaDczbFhsZFpsUGs/view?usp=sharing) generated from the original Caffe model from the VGG-16 paper. 
