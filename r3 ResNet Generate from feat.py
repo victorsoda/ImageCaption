@@ -34,8 +34,8 @@ from collections import Counter
 # In[ ]:
 
 
-model_path = './models/tensorflow'
-model_final_path = './models/tf_final'
+model_path = './models/resnet50_save'
+model_final_path = './models/resnet50_final'
 vgg_path = './data/vgg16-20160129.tfmodel'
 resnet_path = "./data/resnet/"
 meta_name = "ResNet-L50.meta"
@@ -66,7 +66,7 @@ n_epochs = 25
 
 def get_data(annotation_path, feature_path):
     annotations = pd.read_table(annotation_path, sep='\t', header=None, names=['image', 'caption'])
-    return np.load(feature_path, 'r'), annotations['caption'].values
+    return np.load(feature_path, 'r'), annotations['caption'].values, annotations['image'].values
 
 
 class Caption_Generator():
@@ -189,7 +189,7 @@ class Caption_Generator():
 
 # In[ ]:
 
-
+'''
 if not os.path.exists('data/ixtoword.npy'):
     print('You must run 1. O\'reilly Training.ipynb first.')
 else:
@@ -223,6 +223,20 @@ else:
 
     pp = pprint.PrettyPrinter()
     pp.pprint(mylist)
+
+    image, generated_words = caption_generator.build_generator(maxlen=maxlen)
+'''
+if not os.path.exists('data/ixtoword.npy'):
+    print('You must run 1. O\'reilly Training.ipynb first.')
+else:
+    ixtoword = np.load('data/ixtoword.npy').tolist()
+    n_words = len(ixtoword)
+    maxlen = 30
+
+    tf.reset_default_graph()
+    sess = tf.InteractiveSession()
+
+    caption_generator = Caption_Generator(dim_in, dim_hidden, dim_embed, batch_size, maxlen + 2, n_words)
 
     image, generated_words = caption_generator.build_generator(maxlen=maxlen)
 
@@ -277,8 +291,11 @@ def read_image(path):
 
 def test(sess, image, generated_words, ixtoword, idx=0):  # Naive greedy search
 
-    feats, captions = get_data(annotation_path, feature_path)
+    feats, captions, image_names = get_data(annotation_path, feature_path)
     feat = np.array([feats[idx]])
+    print("Answer Caption:")
+    print(captions[idx])
+    print("Target Image: ", image_names[idx])
 
     saver = tf.train.Saver()
     sanity_check = False
