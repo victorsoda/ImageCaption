@@ -303,6 +303,7 @@ def test(sess, image, generated_words, ixtoword, idx=0):  # Naive greedy search
     sanity_check = False
     # sanity_check=True
     if not sanity_check:
+        print("model_path:", model_path)
         saved_path = tf.train.latest_checkpoint(model_path)
         saver.restore(sess, saved_path)
     else:
@@ -327,5 +328,5 @@ def test(sess, image, generated_words, ixtoword, idx=0):  # Naive greedy search
 
 # test_img_path = './data/images/COCO_train2014_000000000025.jpg'
 
-test(sess, image, generated_words, ixtoword, 1)
+test(sess, image, generated_words, ixtoword, 28)
 

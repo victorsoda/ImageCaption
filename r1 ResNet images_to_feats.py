@@ -25,6 +25,7 @@ import tensorflow.python.platform
 from keras.preprocessing import sequence
 from collections import Counter
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "1，2"
 
 # # Downloading Data
 # In order to run this notebook you will need to download a pretrained TensorFlow model for [VGG-16](https://drive.google.com/file/d/0B2vTU3h54lTyaDczbFhsZFpsUGs/view?usp=sharing) generated from the original Caffe model from the VGG-16 paper. 
@@ -287,7 +288,7 @@ def test(sess,image,generated_words,ixtoword): # Naive greedy search
         child = os.path.join(image_path, filename)
         if os.path.isfile(child):
             feat = read_image(child)
-            fc7 = sess.run(graph.get_tensor_by_name("scale5/block3/c/beta:0"), feed_dict={images: feat})
+            fc7 = sess.run(graph.get_tensor_by_name("import/scale5/block3/Relu:0"), feed_dict={images: feat})
             for i in range(5):
                 feats.append(fc7)
     np.save("./data/feats_resnet50_COCO2014.npy", feats)

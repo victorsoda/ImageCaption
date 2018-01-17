@@ -8,7 +8,7 @@
 
 # In[ ]:
 
-
+import datetime
 import math
 import os
 import tensorflow as tf
@@ -23,6 +23,7 @@ import tensorflow.python.platform
 from keras.preprocessing import sequence
 from collections import Counter
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "5, 7"
 
 # # Downloading Data
 # As mentioned in the README, in order to run this notebook, you will need VGG-16 image embeddings for the Flickr-30K dataset. These image embeddings are available from our [Google Drive](https://drive.google.com/file/d/0B5o40yxdA9PqTnJuWGVkcFlqcG8/view?usp=sharing).
@@ -36,11 +37,14 @@ from collections import Counter
 # In[ ]:
 
 
+# model_path = './models/vgg_save'
+# model_path_transfer = './models/vgg_final'
+# feature_path = './data/feats_vgg_COCO2014.npy'
+# annotation_path = './data/results_COCO2014.token'
 model_path = './models/tensorflow'
 model_path_transfer = './models/tf_final'
 feature_path = './data/feats.npy'
 annotation_path = './data/results_20130124.token'
-
 
 # ## Loading data
 # Parse the image embedding features from the Flickr30k dataset `./data/feats.npy`, and load the caption data via `pandas` from `./data/results_20130124.token`
@@ -198,14 +202,20 @@ dim_hidden = 256
 dim_in = 4096
 batch_size = 128
 momentum = 0.9
-n_epochs = 150
+n_epochs = 80
+training_size = 40000
 
 def train(learning_rate=0.001, continue_training=False, transfer=True):
     
     tf.reset_default_graph()
 
     feats, captions = get_data(annotation_path, feature_path)
+    feats = feats[:training_size]
+    captions = captions[:training_size]
+    
     wordtoix, ixtoword, init_b = preProBuildWordVocab(captions)
+    tmp = feats.shape
+    # feats = feats.reshape((tmp[0], tmp[2]))
 
     np.save('data/ixtoword', ixtoword)
 
@@ -255,18 +265,18 @@ def train(learning_rate=0.001, continue_training=False, transfer=True):
                 mask : current_mask_matrix.astype(np.float32)
                 })
 
-            print("Current Cost: ", loss_value, "\t Epoch {}/{}".format(epoch, n_epochs), "\t Iter {}/{}".format(start,len(feats)))
+            print(str(datetime.datetime.now())[:-7], "Loss: ", loss_value, "\t Epoch {}/{}".format(epoch, n_epochs), "\t Iter {}/{}".format(start,len(feats)))
         print("Saving the model from epoch: ", epoch)
-        saver.save(sess, os.path.join(model_path, 'model'), global_step=epoch)
+        saver.save(sess, os.path.join(model_path), global_step=epoch)
 
 
 # In[ ]:
 
 
 try:
-    #train(.001,False,False) #train from scratch
-    train(.001,True,True)    #continue training from pretrained weights @epoch500
-    #train(.001,True,False)  #train from previously saved weights 
+    train(.001,False,False) #train from scratch
+    # train(.001,True,True)    #continue training from pretrained weights @epoch500
+    # train(.001,True,False)  #train from previously saved weights 
 except KeyboardInterrupt:
     print('Exiting Training')
 
