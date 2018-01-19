@@ -25,7 +25,7 @@ import tensorflow.python.platform
 from keras.preprocessing import sequence
 from collections import Counter
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1，2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # # Downloading Data
 # In order to run this notebook you will need to download a pretrained TensorFlow model for [VGG-16](https://drive.google.com/file/d/0B2vTU3h54lTyaDczbFhsZFpsUGs/view?usp=sharing) generated from the original Caffe model from the VGG-16 paper. 
@@ -39,7 +39,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1，2"
 
 model_path = './models/tensorflow'
 model_final_path = './models/tf_final'
-vgg_path = './data/vgg16-20160129.tfmodel'
+vgg_path = './data/vgg16.tfmodel'
 resnet_path = "./data/resnet/"
 meta_name = "ResNet-L50.meta"
 ckpt_name = "ResNet-L50.ckpt"
@@ -191,10 +191,10 @@ class Caption_Generator():
 # In[ ]:
 
 
-if not os.path.exists('data/ixtoword.npy'):
+if not os.path.exists('data/r_ixtoword.npy'):
     print('You must run 1. O\'reilly Training.ipynb first.')
 else:
-    ixtoword = np.load('data/ixtoword.npy').tolist()
+    ixtoword = np.load('data/r_ixtoword.npy').tolist()
     n_words = len(ixtoword)
     maxlen = 15
     graph = tf.get_default_graph()
@@ -203,7 +203,7 @@ else:
     print("loading meta/ckpt...")
     saver = tf.train.import_meta_graph(resnet_path + meta_name)
     saver.restore(sess, resnet_path + ckpt_name)
-    os.system("rm -rf /tmp/load")
+    '''os.system("rm -rf /tmp/load")
     tf.train.write_graph(sess.graph_def, "/tmp/load", "test.pb", False)
 
     # tf.reset_default_graph()
@@ -212,10 +212,11 @@ else:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
         sess.graph.as_default()
-
-    images = tf.placeholder("float32", [1, 224, 224, 3], name="images")
-    tf.import_graph_def(graph_def, input_map={"images": images})
-
+    '''
+    # images = tf.placeholder("float32", [1, 224, 224, 3], name="images")
+    # tf.import_graph_def(graph_def, input_map={"images": images})
+    
+    print("Init generator...")
     caption_generator = Caption_Generator(dim_in, dim_hidden, dim_embed, batch_size, maxlen+2, n_words)
     graph = tf.get_default_graph()
 
@@ -280,18 +281,32 @@ def test(sess,image,generated_words,ixtoword): # Naive greedy search
 
     feats = []  # n_samples * 2048
     files = os.listdir(image_path)
+    files = sorted(files)
+    # for filename in files:
+    #     print(filename)
+    # exit(2333)
     cnt = 0
     for filename in files:
         cnt += 1
-        if cnt % 1000 == 0:
-            print(cnt)
+        if cnt % 100 == 0:
+            print(float(cnt) / 800.0, "% finished")
         child = os.path.join(image_path, filename)
         if os.path.isfile(child):
             feat = read_image(child)
-            fc7 = sess.run(graph.get_tensor_by_name("import/scale5/block3/Relu:0"), feed_dict={images: feat})
-            for i in range(5):
-                feats.append(fc7)
-    np.save("./data/feats_resnet50_COCO2014.npy", feats)
+            fc7 = sess.run(graph.get_tensor_by_name("avg_pool:0"), feed_dict={'images:0': feat})
+            # print(fc7)
+            # print(fc7.shape)
+            # print("Success!")
+            # exit(2333)
+            feats.append(fc7)
+        if cnt == 2:
+            break
+    if (feats[0]==feats[1]).all():
+        print('Fail..')
+    else:
+        print('Success!')
+    # exit(233)
+    np.save("./data/feats_resnet152_COCO2014.npy", feats)
     print("feats.shape =", np.array(feats).shape)
 
 

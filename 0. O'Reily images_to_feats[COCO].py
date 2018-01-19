@@ -24,7 +24,7 @@ import tensorflow.python.platform
 from keras.preprocessing import sequence
 from collections import Counter
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0, 5"
 
 # # Downloading Data
 # In order to run this notebook you will need to download a pretrained TensorFlow model for [VGG-16](https://drive.google.com/file/d/0B2vTU3h54lTyaDczbFhsZFpsUGs/view?usp=sharing) generated from the original Caffe model from the VGG-16 paper. 
@@ -38,7 +38,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2"
 
 model_path = './models/tensorflow'
 model_final_path = './models/tf_final'
-vgg_path = './data/vgg16-20160129.tfmodel'
+vgg_path = './data/vgg16.tfmodel'
 
 
 # # Pick your image
@@ -277,11 +277,10 @@ def test(sess,image,generated_words,ixtoword,test_image_path=0): # Naive greedy 
             print(cnt)
         child = os.path.join(image_path, filename)
         if os.path.isfile(child):
+            print(filename)
             feat = read_image(child)
-            fc7 = sess.run(graph.get_tensor_by_name("import/Relu_1:0"), feed_dict={images: feat})
-            for i in range(5):
-                feats.append(fc7)
-    np.save("./data/feats_vgg_COCO2014.npy", feats)
+            fc7 = sess.run(graph.get_tensor_by_name("import/fc7_relu:0"), feed_dict={images: feat})
+    np.save("./data/feats_vgg16_COCO.npy", feats)
     print("feats.shape =", np.array(feats).shape)
 
     # feat = read_image(test_image_path)

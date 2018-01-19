@@ -21,6 +21,8 @@ import pickle as pkl
 import tensorflow.python.platform
 from keras.preprocessing import sequence
 from collections import Counter
+import datetime
+
 
 # # Downloading Data
 # As mentioned in the README, in order to run this notebook, you will need VGG-16 image embeddings for the Flickr-30K dataset. These image embeddings are available from our [Google Drive](https://drive.google.com/file/d/0B5o40yxdA9PqTnJuWGVkcFlqcG8/view?usp=sharing).
@@ -33,13 +35,13 @@ from collections import Counter
 
 # In[ ]:
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0，1，2, 3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3, 6"
 
 
-model_path = './models/resnet50_save'
-model_path_transfer = './models/resnet50_final'
-feature_path = './data/feats_resnet50_COCO2014.npy'
-annotation_path = './data/results_COCO2014.token'
+model_path = './models/resnet152_save'
+model_path_transfer = './models/resnet152_final'
+feature_path = './data/feats_resnet152_COCO2014.npy'
+annotation_path = './data/caption_2.token'
 
 
 # ## Loading data
@@ -49,26 +51,26 @@ annotation_path = './data/results_COCO2014.token'
 
 
 def get_data(annotation_path, feature_path):
-    annotations = pd.read_table(annotation_path, sep='\t', header=None, names=['image', 'caption'])
+    annotations = pd.read_table(annotation_path, sep='\t', header=None, names=['caption'])
     return np.load(feature_path, 'r'), annotations['caption'].values
 
 
 # In[ ]:
 
 
-feats, captions = get_data(annotation_path, feature_path)
+# feats, captions = get_data(annotation_path, feature_path)
 
 # In[ ]:
 
 
-print(feats.shape)
-print(captions.shape)
+# print(feats.shape)
+# print(captions.shape)
 # exit(233)
 
 # In[ ]:
 
 
-print(captions[0])
+# print(captions[0])
 
 
 # In[ ]:
@@ -196,16 +198,24 @@ dim_embed = 256
 dim_hidden = 256
 dim_in = 2048
 batch_size = 128
-momentum = 0.9
+momentum = 0.0
 n_epochs = 100
+training_size = 80000
 
 
 def train(learning_rate=0.001, continue_training=False, transfer=True):
     tf.reset_default_graph()
 
     feats, captions = get_data(annotation_path, feature_path)
+    tmp = feats.shape
+    feats = feats.reshape((tmp[0], tmp[2]))
     wordtoix, ixtoword, init_b = preProBuildWordVocab(captions)
-
+    print(feats.shape)
+    print(captions.shape)
+#    exit(233)
+    feats = feats[:training_size]
+    captions = captions[:training_size]
+    
     # np.save('data/ixtoword', ixtoword)
 
     index = (np.arange(len(feats)).astype(int))
@@ -255,7 +265,7 @@ def train(learning_rate=0.001, continue_training=False, transfer=True):
                 mask: current_mask_matrix.astype(np.float32)
             })
 
-            print("Current Cost: ", loss_value, "\t Epoch {}/{}".format(epoch, n_epochs),
+            print(str(datetime.datetime.now())[:-7], "Loss: ", loss_value, "\t Epoch {}/{}".format(epoch, n_epochs),
                   "\t Iter {}/{}".format(start, len(feats)))
         print("Saving the model from epoch: ", epoch)
         saver.save(sess, os.path.join(model_path, 'model'), global_step=epoch)
@@ -265,9 +275,9 @@ def train(learning_rate=0.001, continue_training=False, transfer=True):
 
 
 try:
-    # train(.001, False, False)  # train from scratch
+    train(.001, False, False)  # train from scratch
     # train(.001, True, True)  # continue training from pretrained weights @epoch500
-    train(.001, True, False)  #train from previously saved weights
+    # train(.001, True, False)  #train from previously saved weights
 except KeyboardInterrupt:
     print('Exiting Training')
 

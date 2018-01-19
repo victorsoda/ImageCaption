@@ -36,12 +36,12 @@ def preProBuildWordVocab(sentence_iterator, word_count_threshold=30): # function
     bias_init_vector -= np.max(bias_init_vector)
     return wordtoix, ixtoword, bias_init_vector.astype(np.float32)
 
-annotation_path = './data/results_COCO2014.token'
+annotation_path = './data/caption_2.token'
 
 
-annotations = pd.read_table(annotation_path, sep='\t', header=None, names=['image', 'caption'])
+annotations = pd.read_table(annotation_path, sep='\t', header=None, names=['caption'])
 captions = annotations['caption'].values
 wordtoix, ixtoword, init_b = preProBuildWordVocab(captions)
-np.save('data/ixtoword', ixtoword)
+np.save('data/r_ixtoword', ixtoword)
 
 

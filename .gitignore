@@ -5,3 +5,4 @@
 *.mat
 data/
 models/
+tensorflow-resnet-pretrained-20160509/
